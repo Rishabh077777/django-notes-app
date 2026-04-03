@@ -1,29 +1,47 @@
-@Library('Shared')_
-pipeline{
-    agent { label 'dev-server'}
-    
-    stages{
-        stage("Code clone"){
-            steps{
-                sh "whoami"
-            clone("https://github.com/LondheShubham153/django-notes-app.git","main")
-            }
-        }
-        stage("Code Build"){
-            steps{
-            dockerbuild("notes-app","latest")
-            }
-        }
-        stage("Push to DockerHub"){
-            steps{
-                dockerpush("dockerHubCreds","notes-app","latest")
-            }
-        }
-        stage("Deploy"){
-            steps{
-                deploy()
+pipeline {
+    agent {label "agent-1"}
+
+    stages {
+        stage("Code") {
+            steps {
+                git url: "https://github.com/Rishabh077777/django-notes-app.git" , branch:"main"
             }
         }
         
+        stage("Install packages") {
+            steps {
+                sh '''
+                sudo apt-get update -y
+                sudo apt-get install docker.io -y
+                sudo systemctl enable docker --now
+                sudo systemctl status docker
+                sudo usermod -aG docker ubuntu
+                newgrp docker
+                docker ps
+                '''
+            }
+        }
+        
+        stage("Build") {
+            steps {
+                sh '''
+                docker build -t notes-app .
+                '''
+            }
+        }
+        
+        stage("Test") {
+            steps {
+                sh "mkdir -p cloud"
+            }
+        }
+        
+        stage("Deploy") {
+            steps {
+                sh '''
+                docker run -d -p 8000:8000 notes-app:latest
+                '''
+            }
+        }
     }
 }
